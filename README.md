@@ -60,6 +60,8 @@
 gtag로 화면 전환시 로딩 페이지를 보여주었습니다. 
 
 #### project.jsp script
+![projectList](https://user-images.githubusercontent.com/59170160/110252588-7ef3e800-7fc9-11eb-999f-d3efad313bf9.png)
+![prj-add](https://user-images.githubusercontent.com/59170160/110252615-9f23a700-7fc9-11eb-9221-169664e91385.png)
  ```jsx
 /* 사원추가 */
  $(document).ready(function() {
@@ -488,6 +490,7 @@ gtag로 화면 전환시 로딩 페이지를 보여주었습니다.
  자신이 만든 프로젝트가 아니라면 삭제/수정 버튼을 보이지 않게 구현하였습니다.
 
 #### projectDetail.jsp script
+![prj-detail](https://user-images.githubusercontent.com/59170160/110252616-a054d400-7fc9-11eb-828b-a4cbb50d3028.png)
   ```jsx
 // 차트 생성
 am4core.ready(function() {
@@ -557,6 +560,8 @@ AM Chart로 프로젝트에 대한 상세일정을 간트차트로 구현한 코
 화면이 넘어올 때 가져온 데이터를 jstl을 활용하여 시작일과 종료일을 정하여 차트에 뿌려주었습니다.
 
 #### projectHistory.jsp script
+![prj-history](https://user-images.githubusercontent.com/59170160/110252617-a0ed6a80-7fc9-11eb-8eca-31b0dd44f06f.png)
+
  ```jsx
  /* 히스토리 추가시 검증*/
 			$("#histryAddBtn").click(function(){
@@ -1042,7 +1047,8 @@ AM Chart로 프로젝트에 대한 상세일정을 간트차트로 구현한 코
 			})
  ```
  댓글과 대댓글도 비동기로 처리하여 작성하면 바로 추가되도록 구현하였습니다.
- ### insertmember.jsp script
+ ## insertmember.jsp script
+ ![insertmember](https://user-images.githubusercontent.com/59170160/110252618-a0ed6a80-7fc9-11eb-912d-76aa76fa6256.png)
  ```jsx 
  //이메일 유효성 검증
 	$('input[name=email]').on("change", function() {
