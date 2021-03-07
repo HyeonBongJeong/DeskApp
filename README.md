@@ -42,7 +42,9 @@
 - 주소록 
 
 ## 🔧설정 파일
-
+![prj3](https://user-images.githubusercontent.com/59170160/110254022-a7331500-7fd0-11eb-8cc5-2fb18ac91003.png)
+![prj1](https://user-images.githubusercontent.com/59170160/110254024-a8644200-7fd0-11eb-9eb7-b7f478b17c7b.png)
+![prj2](https://user-images.githubusercontent.com/59170160/110254025-a8fcd880-7fd0-11eb-8750-6079a115c832.png)
 #### header.js
  ```jsx
 <!-- Global site tag (gtag.js) - Google Analytics -->
