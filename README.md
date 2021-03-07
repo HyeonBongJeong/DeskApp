@@ -1198,12 +1198,24 @@ AM Chart로 프로젝트에 대한 상세일정을 간트차트로 구현한 코
   도로명 주소 api를 활용해 주소칸에 자동으로 입력되게 하는 코드입니다.
 
 #### DB 
- ![Display_3](https://user-images.githubusercontent.com/69295153/106435685-8bf75600-64b6-11eb-81c4-ad88c39d3b55.png)
- payment_confirm테이블과 payment_comment테이블은 payment테이블의 payment_id가 외래키로 있으며 해당 게시글을 들어갔을때 출력되는 테이블입니다. 
- annual테이블과 conference테이블은 작성자 id로 외래키가 걸려있으며, 작성자 id는 멤버테이블의 컬럼입니다. 
- anuual테이블 혹은 conference테이블에서 글을 작성했을시 작성자 id가 payment테이블의 id에 등록되며, 자동으로 payment_id시퀀스가 증가합니다. 
- payment를 작성했을시 결재를 참조해줄 참조자 3인이 payment_confirm테이블의 S_member에 각각 들어가며, 한명이 승인을 해줄때마다 confrim의 값이 +2가되어 confirm 컬럼의 값이 6이되면
- payment의 status가 진행중에서 승인으로 update됩니다.  
+![rj-erd](https://user-images.githubusercontent.com/59170160/110253000-5ff65580-7fcb-11eb-97a4-bf345173816c.png)
+-member
+member table은 모든 사원의 정보를 담고 있는 테이블입니다.
+-dept
+dept table은 각 부서에 대한 부서명을 가지고 있고 각 회원마다 하나의 부서가 주어집니다.
+-project
+project table은 프로젝트명과 시작일과 종료일 그리고 현재 상태의 정보를 가지고 있습니다.
+-project member
+project memner table은 프로젝트에 참여하는 인원들의 정보가 담겨있습니다.
+-project Detail
+project-Detail table은 프로젝트에 할당된 작업에 관한 정보를 담고있습니다.
+-project-sub
+project-sub table은 작업에 대한 작업내용을 담고 있습니다.
+-project-comment
+project-comment table은 작업내용에 대한 작업 참여인원들 간의 댓글을 담을 수 있는 테이블입니다.
+-project-recomment
+project-recomment table은 댓글에 대한 대댓글을 담고 있는 테이블입니다. 
+
 
 ```jsx
 
