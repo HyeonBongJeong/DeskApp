@@ -9,7 +9,7 @@
 사내에서 사용하는 업무메신저를 확장하여 각각의 프로젝트에 인원을 추가할수 있고 진행상황과 서로의 스케줄을 공유하기 위해 만들었습니다. 
 
 #### 주요기능
-- 프로젝트 협업기능
+- **프로젝트 협업기능**
 - 근태관리
 - 인사관리
 - 전자결제
@@ -1199,48 +1199,1634 @@ AM Chart로 프로젝트에 대한 상세일정을 간트차트로 구현한 코
 
 #### DB 
 ![rj-erd](https://user-images.githubusercontent.com/59170160/110253000-5ff65580-7fcb-11eb-97a4-bf345173816c.png)
--member
-member table은 모든 사원의 정보를 담고 있는 테이블입니다.
--dept
-dept table은 각 부서에 대한 부서명을 가지고 있고 각 회원마다 하나의 부서가 주어집니다.
--project
-project table은 프로젝트명과 시작일과 종료일 그리고 현재 상태의 정보를 가지고 있습니다.
--project member
-project memner table은 프로젝트에 참여하는 인원들의 정보가 담겨있습니다.
--project Detail
-project-Detail table은 프로젝트에 할당된 작업에 관한 정보를 담고있습니다.
--project-sub
-project-sub table은 작업에 대한 작업내용을 담고 있습니다.
--project-comment
-project-comment table은 작업내용에 대한 작업 참여인원들 간의 댓글을 담을 수 있는 테이블입니다.
--project-recomment
-project-recomment table은 댓글에 대한 대댓글을 담고 있는 테이블입니다. 
+- member table은 모든 사원의 정보를 담고 있는 테이블입니다.
+- dept table은 각 부서에 대한 부서명을 가지고 있고 각 회원마다 하나의 부서가 주어집니다.
+- project table은 프로젝트명과 시작일과 종료일 그리고 현재 상태의 정보를 가지고 있습니다.
+- project memner table은 프로젝트에 참여하는 인원들의 정보가 담겨있습니다.
+- project-Detail table은 프로젝트에 할당된 작업에 관한 정보를 담고있습니다.
+- project-sub table은 작업에 대한 작업내용을 담고 있습니다.
+- project-comment table은 작업내용에 대한 작업 참여인원들 간의 댓글을 담을 수 있는 테이블입니다.
+- project-recomment table은 댓글에 대한 대댓글을 담고 있는 테이블입니다. 
 
-
+##project-mapper.xml
 ```jsx
-
-```
-로그인한 사용자가 작성하거나, 수신받은 결재리스트를 뽑아오는 쿼리문입니다. paymentList에서는 현재 로그인한 사용자가 발신한 모든 결재를 출력하며, receive-paymentList에서는 payment-confirm테이블에 로그인한 사용자의 이름이 하나라도 있는 경우 출력하는 쿼리문입니다. 
-
-```jsx
+<!-- 프로젝트 전체 조회 -->
+	<select id="projectList" resultType="arraylist"
+		resultMap="resultProject" parameterType="Project">
+    	select distinct project.*, project_member.project_member_grade,  project_member.id
+		from project, project_member 
+		where project.project_id = project_member.project_id and project_member.id = #{id} and project.project_status = '진행중' or project.project_status = '진행예정'
+	</select>
 	
+	<!-- 프로젝트 프로그레스 용 상태 조회 -->
+	<select id="projectProgress" resultType="arraylist"
+		resultMap="resultProjectSub" parameterType="ProjectSub">
+    		select project_sub_status from project_sub where project_id = #{project_id}
+    </select>
+	
+	<!-- 종료 프로젝트 전체 조회 -->
+	<select id="projectEndList" resultType="arraylist"
+		resultMap="resultProject" parameterType="Project">
+    select distinct project.*, project_member.project_member_grade
+		from project, project_member 
+		where project.project_id = project_member.project_id and project_member.id = #{id} and project.project_status = '종료'
+	</select>
+	<!-- 프로젝트 삭제 -->
+	<delete id="projectDelete" flushCache="true" statementType="PREPARED" timeout="20" parameterType="Project">
+		delete from project where project_id = #{project_id}
+	</delete>
+	<!-- 프로젝트 삭제 -->
+	<delete id="projectSubDelete" flushCache="true" statementType="PREPARED" timeout="20" parameterType="ProjectSub">
+		delete from project_sub where project_sub_id = #{project_sub_id}
+	</delete>
+	
+	<!-- 프로젝트 수정 -->
+	<update id="updateProject" flushCache="true" statementType="PREPARED" timeout="20" parameterType="Project">
+		update project 
+		set project_title = #{project_title},
+		project_std_date = #{project_std_date},
+		project_end_date = #{project_end_date},
+		project_status = #{project_status}
+		where
+		project_id = #{project_id}
+	</update>
+	<!-- 프로젝트 수정 -->
+	<update id="updateTitleProject" flushCache="true" statementType="PREPARED" timeout="20" parameterType="Project">
+		update project 
+		set project_title = #{project_title}
+		where
+		project_id = #{project_id}
+	</update>
+	
+	<!-- 프로젝트 작업 조회 -->
+	<select id="projectSubList" resultType="arraylist"
+		resultMap="resultProjectSub" parameterType="string">
+		   select 
+		   ps.*, 
+		   pm.id, 
+		   pm.project_member_grade, 
+		   p.project_color,  
+		   m.name 
+		   from project_sub ps, PROJECT_MEMBER pm,  member m, project p 
+		   where ps.project_sub_id = pm.project_sub_id 
+		   and p.project_id  = pm.project_id 
+		   and pm.id = m.id 
+		   and ps.project_id = #{project_id}  
+	</select>
+	
+	
+	<!-- 프로젝트 작업 관리자 조회 -->
+	<select id="projectSubChkGrade" resultType="string" parameterType="string">
+		  select distinct
+		  a.project_member_grade  
+		  from 
+		  project_member a, project b 
+		  where 
+		  a.project_id = b.project_id 
+		  and a.id = #{id} 
+		  and a.project_member_grade = 1
+	</select>
+	<!-- 프로젝트 작업 이름 조회 -->
+		<select id="projectSubTitles" resultType="arraylist"
+		resultMap="resultProjectSub" parameterType="string">
+		   select 
+		   project_sub_title
+		   from
+		   project_sub
+		   where
+		   project_sub_id = #{subid}
+	</select>
+	
+	<!-- 프로젝트 히스토리 로그인한 애 사진 조회 -->
+		<select id="projectMemberImg" resultType="string"
+			resultMap="resultMember" parameterType="Member">
+		   select 
+		   profile,
+		   name,
+		   id
+		   from
+		   member
+		   where
+		   id = #{id}
+		</select>
+
+	<!-- 프로젝트 날짜 조회 -->
+	<select id="projectDate" resultType="arraylist"
+		resultMap="resultProject" parameterType="string">
+		   select
+		   project_id,
+		   project_title, 
+		   project_std_date,
+		   project_end_date
+		   from project
+		   where project_id = #{project_id}  
+	</select>
+	<!--히스토리 인원체크 -->
+		<select id="projectMemberChk" resultType="arraylist"
+		resultMap="resultProjectMember" parameterType="ProjectMember">
+		   select
+		   id
+		   from project_member
+		   where project_sub_id = #{project_sub_id}   
+	</select>
+		<!--히스토리 인원체크 -->
+		<select id="projectChk" resultType="arraylist"
+		resultMap="resultProjectMember" parameterType="ProjectMember">
+		   select
+		   id
+		   from project_member
+		   where project_id = #{project_id}   
+	</select>
+
+
+
+		<!-- 프로잭트 삽입 -->
+	<insert id="projectInsert" flushCache="true" statementType="PREPARED" parameterType="Project">
+		insert into project(PROJECT_ID,PROJECT_TITLE,PROJECT_STD_DATE,PROJECT_END_DATE,PROJECT_STATUS,PROJECT_COLOR)
+		values (WEFER_PRJ_SEQ.NEXTVAL,#{project_title},#{project_std_date},#{project_end_date},#{project_status},#{project_color})
+		
+	</insert>
+	<!-- 서브 프로젝트 삽입 -->
+	<insert id="projectSubInsert" flushCache="true" statementType="PREPARED" parameterType="ProjectSub">
+		insert into project_sub(PROJECT_SUB_ID, PROJECT_SUB_TITLE, PROJECT_SUB_STD_DATE, PROJECT_SUB_END_DATE, PROJECT_SUB_IMPORTANT, PROJECT_SUB_STATUS, PROJECT_ID) 
+		values (WEFER_PRJ_SUB_SEQ.NEXTVAL, #{project_sub_title}, #{project_sub_std_date}, #{project_sub_end_date}, #{project_sub_important}, #{project_sub_status}, WEFER_PRJ_SEQ.CURRVAL)
+	</insert>
+	
+		<!-- 프로젝트 멤버 삽입 -->
+	<insert id="projectSubMember" flushCache="true" statementType="PREPARED" parameterType="ProjectMember">
+		insert into project_member(PROJECT_MEMBER_ID, PROJECT_ID, PROJECT_SUB_ID, ID, PROJECT_MEMBER_GRADE) 
+		values (WEFER_PRJ_MEMBER_SEQ.NEXTVAL, WEFER_PRJ_SEQ.CURRVAL, WEFER_PRJ_SUB_SEQ.CURRVAL, #{id}, #{project_member_grade})
+	</insert>
+	<!-- 서브 프로젝트 추가-->
+	<insert id="projectSubAdd" flushCache="true" statementType="PREPARED" parameterType="ProjectSub">
+		insert into project_sub(PROJECT_SUB_ID, PROJECT_SUB_TITLE, PROJECT_SUB_STD_DATE, PROJECT_SUB_END_DATE, PROJECT_SUB_IMPORTANT, PROJECT_SUB_STATUS, PROJECT_ID) 
+		values (WEFER_PRJ_SUB_SEQ.NEXTVAL, #{project_sub_title}, #{project_sub_std_date}, #{project_sub_end_date}, #{project_sub_important}, #{project_sub_status}, #{project_id})
+	</insert>
+			<!-- 프로젝트 멤버 추가 -->
+	<insert id="projectSubAddMember" flushCache="true" statementType="PREPARED" parameterType="ProjectMember">
+		insert into project_member(PROJECT_MEMBER_ID, PROJECT_ID, PROJECT_SUB_ID, ID, PROJECT_MEMBER_GRADE) 
+		values (WEFER_PRJ_MEMBER_SEQ.NEXTVAL, #{project_id}, WEFER_PRJ_SUB_SEQ.CURRVAL, #{id}, #{project_member_grade})
+	</insert>
+	<!-- 작업수정 -->
+	<update id="projectSubUpdate" flushCache="true" statementType="PREPARED" timeout="20" parameterType="ProjectSub">
+		update project_sub 
+		set 
+		project_sub_title = #{project_sub_title},
+		project_sub_std_date = #{project_sub_std_date},
+		project_sub_end_date = #{project_sub_end_date},
+		project_sub_status = #{project_sub_status}
+		where
+		project_sub_id = #{project_sub_id}
+	</update>
+
+		<!-- 프로젝트 멤버 추가 -->
+	<insert id="projectSubUpdateInsertMember" flushCache="true" statementType="PREPARED" parameterType="ProjectMember">
+		insert into project_member(PROJECT_MEMBER_ID, PROJECT_ID, PROJECT_SUB_ID, ID, PROJECT_MEMBER_GRADE) 
+		values (WEFER_PRJ_MEMBER_SEQ.NEXTVAL, #{project_id}, #{project_sub_id}, #{id}, #{project_member_grade})
+	</insert>
+
+
+	<!--  히스토리 추가  -->
+	<insert id="historyInsert" flushCache="true" statementType="PREPARED" parameterType="ProjectDetail">
+		insert into 
+		project_datail
+		(PROJECT_DATAIL_ID, 
+		PROJECT_DATAIL_CONTENT, 
+		PROJECT_DATAIL_WRITE_DATE, 
+		PROJECT_DATAIL_FILE, 
+		ID,
+		PROJECT_ID,
+		PROJECT_SUB_ID,
+		PROJECT_DATAIL_STATUS) 
+		values 
+		(WEFER_PRJ_DATAIL_SEQ.NEXTVAL,
+		 #{project_datail_content}, 
+		 current_date, 
+		 #{project_datail_file}, 
+		 #{id},
+		 #{project_id},
+		 #{project_sub_id},
+		 #{project_datail_status})
+	</insert>
+	
+	<!-- 히스토리 리스트 가져오기 -->
+	<select id="projectHistoryList" resultType="arraylist"
+		resultMap="resultProjectDetail" parameterType="ProjectDetail">
+		select project_datail.*, member.profile, member.name  
+		from  project_datail, member where
+		project_datail.id  = member.id 
+		and project_datail.project_id = #{project_id} 
+		and project_datail.project_sub_id = #{project_sub_id} order by project_datail.project_datail_write_date desc
+	</select>
+	
+	<!-- 지울 파일이름 가져오기 -->
+	<select id="historyFileName" resultType="string" parameterType="string">
+		select project_datail_file from project_datail where project_datail_id = #{project_datail_id}
+	</select>
+	
+
+	<!-- 히스토리 수정 -->
+	<update id="historyUpdateFile" flushCache="true" statementType="PREPARED" timeout="20" parameterType="ProjectDetail">
+		update project_datail 
+		set 
+		<choose>
+			<when test="project_datail_content != null and project_datail_content !=''">
+				project_datail_content = #{project_datail_content}
+			</when>
+			<when test="project_datail_file != null and project_datail_file != ''">
+				project_datail_file = #{project_datail_file}
+			</when>
+			<when test="project_datail_status != null and project_datail_status != ''">
+				project_datail_status = #{project_datail_status}
+			</when>
+			<otherwise>
+				project_datail_content = #{project_datail_content},
+				project_datail_status = #{project_datail_status},
+				project_datail_file = #{project_datail_file}
+			</otherwise>
+		</choose>
+		
+		where
+		project_datail_id = #{project_datail_id}
+	</update>
+	
+	<!-- 히스토리 삭제 -->
+	<delete id="projectHistoryDelete" flushCache="true" statementType="PREPARED" timeout="20" parameterType="ProjectDetail">
+		delete from project_datail where project_datail_id = #{project_datail_id}
+	</delete>
+
+	
+	<!-- 댓글 인서트 -->
+	<insert id = "projectCommentWirte" flushCache="true" statementType="PREPARED" parameterType="ProjectComment">
+		insert into project_comment(project_comment_id, project_comment_content, project_comment_writedate, project_datail_id, id)
+		values(WEFER_PRJ_COMMENT_SEQ.NEXTVAL, #{project_comment_content}, current_date, #{project_datail_id}, #{id})
+		
+	</insert>
+	
+	
+		<!-- 댓글 가져오기 -->
+	<select id="projectCommentList" resultType="arraylist" parameterType="ProjectComment" resultMap="resultProjectComment">
+		select a.*, b.name, b.profile from project_comment a, member b where a.id = b.id and a.project_datail_id=#{project_datail_id}
+	</select>
+	<!-- 인서트한 댓글 가져오기 -->
+	<select id="projectCommentInsertList" resultType="arraylist" parameterType="ProjectComment" resultMap="resultProjectComment">
+		select a.*, b.name, b.profile from project_comment a, member b 
+		where a.id = b.id and a.project_datail_id=#{project_datail_id} and a.project_comment_id =(select max(project_comment_id) from project_comment)
+	</select>
+	<!-- 대댓글 인서트 -->
+	<insert id = "projecthistoryReCommentInsert" flushCache="true" statementType="PREPARED" parameterType="ProjectReComment">
+		insert into project_recomment(project_recomment_id, project_recomment_content, project_recomment_date, project_comment_id, id)
+		values(WEFER_PRJ_RECOMMENT_SEQ.NEXTVAL, #{project_recomment_content}, current_date, #{project_comment_id}, #{id})
+	</insert>
+	<!-- 인서트한 댓글 가져오기 -->
+	<select id="projectreReCommentInsertList" resultType="arraylist" parameterType="ProjectReComment" resultMap="resultProjectReComment">
+		select a.*, b.name, b.profile from project_recomment a, member b 
+		where a.id = b.id and a.project_comment_id=#{project_comment_id} and a.project_recomment_id =(select max(project_recomment_id) from project_recomment)
+	</select>
+		<!-- 대댓글 가져오기 -->
+	<select id="projectReCommentList" resultType="arraylist" parameterType="ProjectReComment" resultMap="resultProjectReComment">
+		select a.*, m.name, m.profile from project_recomment a, member m where a.id = m.id and project_comment_id = #{project_comment_id} order by a.project_recomment_date asc
+	</select>
+	
+	<!-- 댓글 삭제 -->
+	<delete id="projectCommentDelete" flushCache="true" statementType="PREPARED" timeout="20" parameterType="ProjectComment">
+		delete from project_comment where project_comment_id = #{project_comment_id}
+	</delete>
+	<!-- 댓글 삭제 -->
+	<delete id="projectReCommentDelete" flushCache="true" statementType="PREPARED" timeout="20" parameterType="ProjectReComment">
+		delete from project_recomment where project_recomment_id = #{project_recomment_id}
+	</delete>
+	
+	<!-- 프로젝트 상태 업데이트 -->
+	<update id="updateStatus" flushCache="true" statementType="PREPARED" timeout="20" parameterType="Project">
+		update project 
+		set 
+		<choose>
+			<when test="project_status == '종료'">
+				project_status = #{project_status}
+			</when>
+			<when test="project_status == '진행예정'">
+				project_status = #{project_status}
+			</when>
+		</choose>
+		
+		where
+		project_id = #{project_id}
+	</update>
 ```
-결재 승인여부를 확인하고 상태를 변경하는 쿼리문입니다. S_member가 한명씩 승인할때마다 2씩카운트를하며 전체의 총합이 6이되면 진행중에서 승인으로 변경되도록 했습니다. 
+프로젝트 협업 관련 mapper 쿼리문 입니다.
+
 ```jsx
+<!-- 사원추가 인서트 문 -->
+<insert id="insertMember"  parameterType="Member"  statementType="PREPARED">
+		insert into member(
+			id,
+			password,
+			name,
+			birth,
+			phone,
+			email,
+			position,
+			profile,
+			status,
+			annual,
+			dept_no,
+			employ_date,
+			address)
+    	values(
+    		'WE'||TO_CHAR(SYSDATE,'RRMMDD')||LPAD(WEFER_MEMBER_SEQ.NEXTVAL,2,#{dept_no}),
+    		1234,
+    		#{name},
+    		#{birth},
+    		#{phone},
+    		#{email},
+    		#{position},
+    		#{profile},
+    		'퇴근',
+    		'12',
+    		#{dept_no},
+    		SYSDATE,
+    		#{address})
+	</insert>
+	<!-- 회원가입 이메일 중복검사 -->
+	<select id="emailChk" parameterType="Member" resultType="arraylist" resultMap="resultMember">
+		select email from member where email = #{email} 
+	</select>
+```
+member-maaper에 있는 사원 추가 쿼리문 입니다.
+
+#### ProjectController.java
+```jsx
+package com.kh.wefer.project.controller;
+
+
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+
+import org.json.simple.JSONArray;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+
+import com.kh.wefer.member.model.domain.Member;
+import com.kh.wefer.project.model.domain.Project;
+import com.kh.wefer.project.model.domain.ProjectComment;
+import com.kh.wefer.project.model.domain.ProjectDetail;
+import com.kh.wefer.project.model.domain.ProjectMember;
+import com.kh.wefer.project.model.domain.ProjectReComment;
+import com.kh.wefer.project.model.domain.ProjectSub;
+import com.kh.wefer.project.model.service.ProjectService;
+
+import net.sf.json.JSONObject;
+
+@Controller
+public class ProjectController {
+	@Autowired
+	private ProjectService pService;
+	
+	
+	private static final String FILE_SERVER_PATH = "../../.metadata/.plugins/org.eclipse.wst.server.core/tmp0/wtpwebapps/wefer/resources/projectFiles";
+	//프로젝트 리스트 출력
+	@RequestMapping(value = "/projectlist.do", method = RequestMethod.GET)
+	public ModelAndView projectList(HttpServletRequest request, ModelAndView mv, ProjectMember pm, ProjectSub ps, Project pid,HttpSession session) {
+		String id = (String) session.getAttribute("loginId");
+		
+		pm.setId(id);
+		List<Project> projectLists = new ArrayList<Project>();
+		List<ProjectSub> projectSubLists = new ArrayList<ProjectSub>();
+		Date date = new Date();
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.KOREA);
+		
+		java.sql.Date today = new java.sql.Date(date.getTime());
+		System.out.println(today);
+		
+		
+		projectLists = pService.projectList(pm);
+		System.out.println(projectLists);
+		
+		for(int a = 0; a<projectLists.size(); a++) {
+			if(projectLists.get(a).getProject_end_date().compareTo(today) < 0) {
+				pid.setProject_id(projectLists.get(a).getProject_id());
+				pid.setProject_status("종료");
+				pService.updateStatus(pid);
+			}else if(projectLists.get(a).getProject_end_date().compareTo(today) > 0) {
+				pid.setProject_id(projectLists.get(a).getProject_id());
+				pid.setProject_status("진행예정");
+				pService.updateStatus(pid);
+			}
+
+			
+		}
+		int progress = 0;
+		for(int i = 0; i<projectLists.size(); i++) {
+			progress = 0;
+			ps.setProject_id(projectLists.get(i).getProject_id());
+		
+			
+			projectSubLists = pService.projectProgress(ps);
+			int status_range = 100/projectSubLists.size();
+			
+			for(int a = 0; a<projectSubLists.size(); a++) {
+				if(projectSubLists.get(a).getProject_sub_status().equals("진행중")) {
+					progress = progress + status_range/2;
+				}else if(projectSubLists.get(a).getProject_sub_status().equals("종료")) {
+					progress = progress + status_range;
+				}else if(projectSubLists.get(a).getProject_sub_status().equals("진행예정")){
+					progress = progress + 0;
+				}
+				
+				
+			}
+			projectLists.get(i).setProgress(progress);
+		}
+	
+		
+		mv.addObject("projectLists", projectLists);
+		mv.addObject("progress", progress);
+		
+		mv.setViewName("project/projectList");
+		return mv;
+	}
+	
+	
+	
+	
+	
+	
+	//종료된 프로젝트 리스트 출력
+		@RequestMapping(value = "/projectEndlist.do", method = RequestMethod.GET)
+		public ModelAndView projectEndlist(HttpServletRequest request, ModelAndView mv, ProjectMember pm, HttpSession session) {
+			String id = (String) session.getAttribute("loginId");
+			pm.setId(id);
+			List<Project> projectLists = new ArrayList<Project>();
+			projectLists = pService.projectEndList(pm);
+			mv.addObject("projectLists", projectLists);
+			mv.setViewName("project/projectEndList");
+			return mv;
+		}
+	
+	
+	//프로젝트 삭제
+	@RequestMapping(value = "/projectDelete.do", method = RequestMethod.POST)
+	public void projectDelete(HttpServletResponse response, Project p) {
+		PrintWriter out = null;
+		JSONObject job = new JSONObject();
+		try {
+			job.put("ack", pService.projectDelete(p));
+			out = response.getWriter();
+			out.append(job.toString());
+		} catch (Exception e) {
+			job.put("ack", -1);
+		} finally {
+			out.flush();
+			out.close();
+		}
+	}
+	//프로젝트 삭제
+	@RequestMapping(value = "/projectSubDelete.do", method = RequestMethod.POST)
+	public void projectSubDelete(HttpServletResponse response, ProjectSub ps) {
+		PrintWriter out = null;
+		JSONObject job = new JSONObject();
+		try {
+			job.put("ack", pService.projectSubDelete(ps));
+			System.out.println(response);
+			out = response.getWriter();
+			out.append(job.toString());
+		} catch (Exception e) {
+			job.put("ack", -1);
+		} finally {
+			out.flush();
+			out.close();
+		}
+	}
+
+	//작업출력
+	@RequestMapping(value = "/projectDetail.do", method = RequestMethod.GET)
+	public ModelAndView projectDetail(@RequestParam(name="id", required = false) String project_id, HttpServletRequest request,
+			ModelAndView mv, HttpSession session,HttpServletResponse response, ProjectMember pm, ProjectSub ps, Project p) {
+		System.out.println(project_id);
+		System.out.println(pService.projectSubList(project_id));
+		System.out.println(pService.projectDate(project_id));
+		try {
+			request.setCharacterEncoding("UTF-8");
+			response.setContentType("text/html; charset=UTF-8");
+		} catch (UnsupportedEncodingException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		PrintWriter out = null;
+		
+		int result = 0;
+		String id = (String) session.getAttribute("loginId");
+		pm.setId(id);
+		pm.setProject_id(project_id);
+		List<ProjectMember> projectChk = new ArrayList<ProjectMember>();
+		List<ProjectMember> projectsub = new ArrayList<ProjectMember>();
+		projectChk = pService.projectChk(pm);
+	
+//		String grade = pService.projectSubChkGrade(id);
+//		System.out.println("grade " +  grade);
+//		mv.addObject("grade",grade);
+		for(int i=0; i<projectChk.size(); i++) {
+			if(id.equals(projectChk.get(i).getId().toString())) {
+				result = 1;
+				break;
+			}
+			
+		}
+		if(result == 1) {
+			projectsub = pService.projectSubList(project_id);
+			
+			mv.addObject("projectSubList",projectsub);
+			mv.addObject("projectDate", pService.projectDate(project_id));
+//			mv.addObject("projectSubMemberList", pService.projectSubMemberList(project_id));
+			mv.setViewName("project/projectDetail");
+		}else {
+			try {
+				out = response.getWriter();
+				out.append("<script>alert('수정완료.');location.href='projectlist.do'</script>");
+				
+				out.flush();
+				out.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+		}
+	
+		
+		
+		return mv;
+	}
+	//히스토리 화면이동
+	@RequestMapping(value = "/projectHistory.do", method = RequestMethod.GET)
+	public ModelAndView projectHistory(HttpServletRequest request, HttpServletResponse response,
+			HttpSession session, ModelAndView mv, ProjectMember pm, Member m, ProjectDetail pd,
+			@RequestParam(name="subid") String subid, @RequestParam(name="pid") String project_id) {
+		
+		try {
+			request.setCharacterEncoding("UTF-8");
+			response.setContentType("text/html; charset=UTF-8");
+		} catch (UnsupportedEncodingException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+
+		
+		String id = (String) session.getAttribute("loginId");
+		m.setId(id);
+		System.out.println(id);
+		PrintWriter out = null;
+		pm.setProject_sub_id(subid);
+		List<ProjectMember> projectMemChk = new ArrayList<ProjectMember>();
+		projectMemChk = pService.projectMemberChk(pm);
+		int result = 0;
+
+		for(int i = 0; i<projectMemChk.size(); i++) {
+			System.out.println(projectMemChk.get(i).getId());
+			String a = projectMemChk.get(i).getId();
+			if(id.equals(a)) {
+				result = 1;
+				break;
+			}
+		}
+		System.out.println(result);
+		if(result == 1) {
+			pd.setProject_id(project_id);
+			pd.setProject_sub_id(subid);
+			mv.addObject("projectHistoryList", pService.projectHistoryList(pd));
+			System.out.println(pService.projectHistoryList(pd));
+			System.out.println(pd);
+			mv.addObject("projectMemberImg",pService.projectMemberImg(m));
+			mv.addObject("projectSubList", pService.projectSubTitles(subid));
+			mv.addObject("projectDate", pService.projectDate(project_id));
+			mv.addObject("subid",subid);
+			mv.setViewName("project/projectHistory");	
+			System.out.println("redirect:projectHistory.do?subid="+subid+"&pid="+project_id+"");
+		}else {
+			try {
+				out = response.getWriter();
+				out.append("<script>alert('작업인원에 포함되지 않았습니다.');location.href='projectDetail.do?id="+project_id+"'</script>");
+				out.flush();
+				out.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+	
+
+		
+		//		else {
+
+//		}
+			
+			
+
+			
+		
+		return mv;
+	}
+	
+	
+	
+	
+	
+	//프로젝트 생성
+	@RequestMapping(value = "/projectInsert.do", method = RequestMethod.POST)
+	public ModelAndView projectInsert(HttpServletRequest request,HttpSession session, ModelAndView mv, Project p, ProjectSub ps, ProjectMember pm,
+			@RequestParam(name="project_title", required = false)String project_title,@RequestParam(name="project_color")String project_color,
+			@RequestParam(name="project_std_date")String project_std_date, @RequestParam(name="project_end_date")String project_end_date,
+			@RequestParam(name="project_sub_title")String sub_work,@RequestParam(name="id", required = false)String prj_members_id,
+			@RequestParam(name="prj_members_id_count")String prj_members_id_count, @RequestParam(name="project_sub_std_date")String project_sub_std_date,
+			@RequestParam(name="project_sub_end_date")String project_sub_end_date,@RequestParam(name="project_sub_important")String important) {
+		try {
+			
+	
+			String sessoinId = (String) session.getAttribute("loginId");
+			
+			Date prjEndDate; // 삭제 시작일
+			Date prjStartDate; // 삭제 시작일
+			Date currentDate; // 현재날짜 Date
+			String oTime = ""; // 현재날짜
+			String prjStatus = null;
+
+			SimpleDateFormat mSimpleDateFormat = new SimpleDateFormat ( "yyyy-MM-dd", Locale.KOREA );
+
+			Date currentTime = new Date();
+
+			oTime = mSimpleDateFormat.format ( currentTime ); //현재시간 (String)
+
+			prjStartDate = mSimpleDateFormat.parse( project_std_date );
+
+			prjEndDate = mSimpleDateFormat.parse( project_end_date );
+
+			currentDate =  mSimpleDateFormat.parse( oTime );
+
+								
+
+			int endCompare = currentDate.compareTo( prjEndDate ); // 날짜비교
+			int stdCompare = currentDate.compareTo( prjStartDate ); // 날짜비교
+			System.out.println("시작일이 오늘날짜보다 ? " +stdCompare);
+			System.out.println("종료일이 오늘날짜보다 ? " +endCompare);
+
+// -1 전     1 후      0 오늘
+		
+			if (endCompare >= 0 && stdCompare >0){ // 현재날짜가 삭제 시작일 후 인 경우
+				prjStatus = "종료";					
+
+			} else if (endCompare < 0 && stdCompare >= 0) { // 현재날짜가 삭제 시작일 전 인 경우
+
+				prjStatus = "진행중";
+
+
+			} else if(stdCompare <0 && endCompare < 0) { // 현재날짜가 삭제일 인 경우
+
+				prjStatus = "진행예정";
+			}
+			
+			System.out.println("프로젝트 이름" +project_title);
+			System.out.println("프로젝트 색" +project_color);
+			System.out.println("프로젝트 시작일" +project_std_date);
+			System.out.println("프로젝트 종료일" +project_end_date);
+			System.out.println("프로젝트 상태" +prjStatus);
+			p.setProject_status(prjStatus);
+			pService.projectInsert(p);
+			
+
+			
+			
+			//작업제목
+			String prj_titles = sub_work.substring(1);
+			String[] prj_sub_titles = prj_titles.split(",");
+			ArrayList<String> prj_sub_title = new ArrayList<String>(Arrays.asList(prj_sub_titles));
+			System.out.println("all: " +prj_sub_title.toString() + prj_sub_title.size());
+			
+			//작업 중요도
+			String[] prj_sub_important = important.split(",");
+			ArrayList<String> prj_sub_importants = new ArrayList<String>(Arrays.asList(prj_sub_important));
+			System.out.println("all: " +prj_sub_importants.toString());
+			
+
+			
+			//시작일
+			String project_sub_std_dates[] = project_sub_std_date.split(",");
+			ArrayList<String> project_sub_std_dates2 = new ArrayList<String>(Arrays.asList(project_sub_std_dates));
+			System.out.println("all: " + project_sub_std_dates2.toString());
+			
+			//종료일
+			String project_end_dates[] = project_sub_end_date.split(",");
+			ArrayList<String> project_sub_end_dates2 = new ArrayList<String>(Arrays.asList(project_end_dates));
+			System.out.println("all: " + project_sub_end_dates2.toString());
+			
+			
+			//작업자
+			String prj_members_ids[] = prj_members_id.split(",");
+			ArrayList<String> prj_members_group = new ArrayList<String>(Arrays.asList(prj_members_ids));
+			System.out.println("all: " + prj_members_group.toString());
+			
+			//작업자 수
+			String prj_members_id_counts[] = prj_members_id_count.split(",");
+	
+			
+			Date prjStartDate2; // 삭제 시작일
+			Date prjEndDate2; // 삭제 시작일
+			Date currentDate2; // 현재날짜 Date
+			String oTime2 = ""; // 현재날짜
+			String prjStatus2 = null;
+
+			SimpleDateFormat mSimpleDateFormat2 = new SimpleDateFormat ( "yyyy-MM-dd", Locale.KOREA );
+
+			Date currentTime2 = new Date();
+
+			
+			
+			
+
+			System.out.println("eee :"+ prj_sub_title.size());
+			for(int i = 0; i < prj_sub_title.size(); i++) {
+				oTime2 = mSimpleDateFormat2.format ( currentTime2 ); //현재시간 (String)
+
+
+
+				prjStartDate2 = mSimpleDateFormat2.parse( project_sub_std_dates2.get(i) );
+				prjEndDate2 = mSimpleDateFormat2.parse( project_sub_end_dates2.get(i) );
+
+				currentDate2=  mSimpleDateFormat2.parse( oTime2 );
+
+									
+
+				int stdCompare2 = currentDate2.compareTo( prjStartDate2 ); // 날짜비교
+				int endCompare2 = currentDate2.compareTo( prjEndDate2 ); // 날짜비교
+
+				if (endCompare2 >= 0 && stdCompare2 >0){ // 현재날짜가 삭제 시작일 후 인 경우
+					prjStatus2 = "종료";					
+
+				} else if (endCompare2 < 0 && stdCompare2 >= 0) { // 현재날짜가 삭제 시작일 전 인 경우
+
+					prjStatus2 = "진행중";
+
+
+				} else if(stdCompare2 <0 && endCompare2 < 0) { // 현재날짜가 삭제일 인 경우
+
+					prjStatus2 = "진행예정";
+				}
+
+
+				
+				String std = project_sub_std_dates2.get(i);
+				String end = project_sub_end_dates2.get(i);
+				Date tempDate = null;
+				Date tempDate2 = null;
+				
+				SimpleDateFormat datetransfer = new SimpleDateFormat("yyyy-mm-dd");
+				tempDate = datetransfer.parse(std);
+				
+				tempDate2 = datetransfer.parse(end);
+				
+				
+				System.out.println("aaa" + tempDate);
+				System.out.println("bbb" + tempDate2);
+				String toTempDate = datetransfer.format(tempDate);
+				String toTempDate2 = datetransfer.format(tempDate2);
+
+				java.sql.Date reTempDate = java.sql.Date.valueOf(toTempDate);
+				java.sql.Date reTempDate2 = java.sql.Date.valueOf(toTempDate2);
+				ps.setProject_sub_title(prj_sub_title.get(i));
+				ps.setProject_sub_important(prj_sub_importants.get(i));
+				ps.setProject_sub_std_date(reTempDate);
+				ps.setProject_sub_end_date(reTempDate2);
+				ps.setProject_sub_status(prjStatus2);
+				pService.projectSubInsert(ps);
+				
+					
+				int a[] = null;
+			
+					a = new int[prj_sub_title.size()];
+					a[i] = Integer.parseInt(prj_members_id_counts[i]); //2 3
+					
+					for(int j=0; j<a[i]; j++) {
+						System.out.println(prj_members_group.get(0));
+						pm.setId(prj_members_group.get(0));
+						//여기서 세션아이디 비교
+						if(prj_members_group.get(0).equals(sessoinId)) {
+							pm.setProject_member_grade(1);
+							
+						}else {
+							pm.setProject_member_grade(0);							
+						}
+						pService.projectSubMember(pm);
+						prj_members_group.remove(0); 
+						
+					}
+
+				
+			}
+			
+
+			System.out.println("성공");
+			mv.setViewName("redirect:projectlist.do");
+		}catch (Exception e) {
+			e.printStackTrace();
+			System.out.println("실패");
+			mv.addObject("message", e.getMessage());
+			mv.setViewName("project/projectlist.do");
+		}
+
+		return mv;
+	}
+	
+	//프로젝트  작업 수정
+		@RequestMapping(value = "/projectSubUpdate.do", method = RequestMethod.POST)
+		public ModelAndView projectSubUpdate(HttpServletRequest request, ModelAndView mv, ProjectSub ps, ProjectMember pm, Project p,
+				@RequestParam(name="p_pid") String p_pid, 
+				@RequestParam(name="project_sub_id_update") String prj_update_id, 
+				@RequestParam(name="project_sub_title_update") String project_update_title, 
+				@RequestParam(name="project_std_date_update") String project_std_update_date,
+				@RequestParam(name="project_end_date_update") String project_end_update_date,
+				@RequestParam(name="update_important") String update_important,
+				@RequestParam(name="prj_member_id_update",required = false) String prj_member_id_update
+				){
+				
+				
+				
+			Date prjStartDate; // 삭제 시작일
+			Date prjEndDate; // 삭제 시작일
+			Date currentDate; // 현재날짜 Date
+			String oTime = ""; // 현재날짜
+			String prjStatus = null;
+
+			SimpleDateFormat mSimpleDateFormat = new SimpleDateFormat ( "yyyy-MM-dd", Locale.KOREA );
+
+			Date currentTime = new Date();
+			try {
+			
+				java.sql.Date project_std_update =java.sql.Date.valueOf(project_std_update_date);	
+				java.sql.Date project_end_update =java.sql.Date.valueOf(project_end_update_date);	
+				oTime = mSimpleDateFormat.format ( currentTime ); //현재시간 (String)
+	
+				
+				prjEndDate = mSimpleDateFormat.parse( project_end_update_date );
+				prjStartDate = mSimpleDateFormat.parse(project_std_update_date);
+
+				currentDate =  mSimpleDateFormat.parse( oTime );
+
+									
+
+				int stdCompare = currentDate.compareTo( prjStartDate ); // 날짜비교
+				int endCompare = currentDate.compareTo( prjEndDate ); // 날짜비교
+
+
+				if (endCompare >= 0 && stdCompare >0){ // 현재날짜가 삭제 시작일 후 인 경우
+					prjStatus = "종료";					
+
+				} else if (endCompare < 0 && stdCompare >= 0) { // 현재날짜가 삭제 시작일 전 인 경우
+
+					prjStatus = "진행중";
+
+
+				} else if(stdCompare <0 && endCompare < 0) { // 현재날짜가 삭제일 인 경우
+
+					prjStatus = "진행예정";
+				}
+				
+				if(prj_member_id_update == null || prj_member_id_update.equals("")) {
+					ps.setProject_id(p_pid);
+					ps.setProject_sub_id(prj_update_id);
+					ps.setProject_sub_title(project_update_title);
+					ps.setProject_sub_std_date(project_std_update);
+					ps.setProject_sub_end_date(project_end_update);
+					ps.setProject_sub_important(update_important);
+					ps.setProject_sub_status(prjStatus);
+					System.out.println("멤버없음");
+					pService.projectSubUpdate(ps);
+					
+				}else {
+					ps.setProject_id(p_pid);
+					ps.setProject_sub_id(prj_update_id);
+					ps.setProject_sub_title(project_update_title);
+					ps.setProject_sub_std_date(project_std_update);
+					ps.setProject_sub_end_date(project_end_update);
+					ps.setProject_sub_important(update_important);
+					ps.setProject_sub_status(prjStatus);
+					pService.projectSubUpdate(ps);
+					
+					//프로잭트 멤버 추가
+					pm.setId(prj_member_id_update);
+					pm.setProject_sub_id(prj_update_id);
+					pm.setProject_id(p_pid);
+					pService.projectSubUpdateInsertMember(pm);
+				}
+				
+				
+				mv.setViewName("redirect:projectDetail.do?id="+p_pid+"");
+			
+
+				System.out.println("성공");
+				
+			}catch (Exception e) {
+				e.printStackTrace();
+				System.out.println("실패");
+				mv.addObject("message", e.getMessage());
+				mv.setViewName("redirect:projectlist.do");
+			}
+
+			return mv;
+		}
+		
+		//작업 추가
+		@RequestMapping(value = "/projectSubInsert.do", method = RequestMethod.POST)
+		public ModelAndView projectSubInsert(HttpServletRequest request, HttpSession session, RedirectAttributes redirect, ModelAndView mv, ProjectSub ps, ProjectMember pm,
+				@RequestParam(name="pid") String project_id,
+				@RequestParam(name="project_sub_title")String sub_work,
+				@RequestParam(name="id", required = false)String prj_members_id,
+				@RequestParam(name="prj_members_id_count")String prj_members_id_count,
+				@RequestParam(name="project_sub_std_date")String project_sub_std_date,
+				@RequestParam(name="project_sub_end_date")String project_sub_end_date,
+				@RequestParam(name="project_sub_important")String important) {
+				System.out.println(project_id);
+				System.out.println(sub_work);
+				System.out.println(prj_members_id);
+				System.out.println(prj_members_id_count);
+				System.out.println(project_sub_std_date);
+				System.out.println(project_sub_end_date);
+				System.out.println(important);
+				
+				//작업제목
+				String prj_titles = sub_work.substring(1);
+				String[] prj_sub_titles = prj_titles.split(",");
+				ArrayList<String> prj_sub_title = new ArrayList<String>(Arrays.asList(prj_sub_titles));
+				System.out.println("all: " +prj_sub_title.toString() + prj_sub_title.size());
+				
+				//작업 중요도
+				String[] prj_sub_important = important.split(",");
+				ArrayList<String> prj_sub_importants = new ArrayList<String>(Arrays.asList(prj_sub_important));
+				System.out.println("all: " +prj_sub_importants.toString());
+				
+
+				
+				//시작일
+				String project_sub_std_dates[] = project_sub_std_date.split(",");
+				ArrayList<String> project_sub_std_dates2 = new ArrayList<String>(Arrays.asList(project_sub_std_dates));
+				System.out.println("all: " + project_sub_std_dates2.toString());
+				
+				//종료일
+				String project_end_dates[] = project_sub_end_date.split(",");
+				ArrayList<String> project_sub_end_dates2 = new ArrayList<String>(Arrays.asList(project_end_dates));
+				System.out.println("all: " + project_sub_end_dates2.toString());
+				
+				
+				//작업자
+				String prj_members_ids[] = prj_members_id.split(",");
+				ArrayList<String> prj_members_group = new ArrayList<String>(Arrays.asList(prj_members_ids));
+				System.out.println("all: " + prj_members_group.toString());
+				
+				//작업자 수
+				String prj_members_id_counts[] = prj_members_id_count.split(",");
+		
+				
+				Date prjStartDate2; // 삭제 시작일
+				Date prjEndDate2; // 삭제 시작일
+				Date currentDate2; // 현재날짜 Date
+				String oTime2 = ""; // 현재날짜
+				String prjStatus2 = null;
+
+				SimpleDateFormat mSimpleDateFormat2 = new SimpleDateFormat ( "yyyy-MM-dd", Locale.KOREA );
+
+				Date currentTime2 = new Date();
+
+				
+				
+				
+
+				
+
+
+
+					try {
+						for(int i = 0; i < prj_sub_title.size(); i++) {
+						oTime2 = mSimpleDateFormat2.format ( currentTime2 ); //현재시간 (String)
+						
+						prjStartDate2 = mSimpleDateFormat2.parse( project_sub_std_dates2.get(i) );
+						prjEndDate2 = mSimpleDateFormat2.parse( project_sub_end_dates2.get(i) );
+						
+						currentDate2=  mSimpleDateFormat2.parse( oTime2 );
+						int stdCompare2 = currentDate2.compareTo( prjStartDate2 ); // 날짜비교
+						int endCompare2 = currentDate2.compareTo( prjEndDate2 ); // 날짜비교
+						
+						
+						
+						
+
+						if (endCompare2 >= 0 && stdCompare2 >0){ // 현재날짜가 삭제 시작일 후 인 경우
+							prjStatus2 = "종료";					
+
+						} else if (endCompare2 < 0 && stdCompare2 >= 0) { // 현재날짜가 삭제 시작일 전 인 경우
+
+							prjStatus2 = "진행중";
+
+
+						} else if(stdCompare2 <0 && endCompare2 < 0) { // 현재날짜가 삭제일 인 경우
+
+							prjStatus2 = "진행예정";
+						}
+
+
+						
+						
+						String std = project_sub_std_dates2.get(i);
+						String end = project_sub_end_dates2.get(i);
+						Date tempDate = null;
+						Date tempDate2 = null;
+						
+						SimpleDateFormat datetransfer = new SimpleDateFormat("yyyy-mm-dd");
+						tempDate = datetransfer.parse(std);
+						
+						tempDate2 = datetransfer.parse(end);
+						
+						
+						System.out.println("aaa2" + tempDate);
+						System.out.println("bbb2" + tempDate2);
+						String toTempDate = datetransfer.format(tempDate);
+						String toTempDate2 = datetransfer.format(tempDate2);
+
+						java.sql.Date reTempDate = java.sql.Date.valueOf(toTempDate);
+						java.sql.Date reTempDate2 = java.sql.Date.valueOf(toTempDate2);
+						ps.setProject_id(project_id);
+						ps.setProject_sub_title(prj_sub_title.get(i));
+						ps.setProject_sub_important(prj_sub_importants.get(i));
+						ps.setProject_sub_std_date(reTempDate);
+						ps.setProject_sub_end_date(reTempDate2);
+						ps.setProject_sub_status(prjStatus2);
+						pService.projectSubAdd(ps);
+						
+							
+						int a[] = null;
+						String loginId = (String) session.getAttribute("loginId");
+							a = new int[prj_sub_title.size()];
+							a[i] = Integer.parseInt(prj_members_id_counts[i]); //2 3
+							
+	
+							for(int j=0; j<a[i]; j++) {
+								System.out.println(prj_members_group.get(0));
+								pm.setId(prj_members_group.get(0));
+								pm.setProject_id(project_id);
+								//여기서 세션아이디 비교
+								if(loginId.equals(prj_members_group.get(0))) {
+									pm.setProject_member_grade(1);									
+								}else {
+									pm.setProject_member_grade(0);
+								}
+								pService.projectSubAddMember(pm);
+								prj_members_group.remove(0); 
+								
+							}
+							 redirect.addAttribute("id", project_id); 
+							
+							mv.setViewName("redirect:projectDetail.do");
+
+						
+					}
+					} catch (ParseException e) {
+						System.out.println("aaaaaa");
+						e.printStackTrace();
+					}
+
+
+										
+
+					
+				
+				
+			return mv;
+		}
+		
+		//프로젝트 수정
+				@RequestMapping(value = "/projectUpdate.do", method = RequestMethod.POST)
+				public ModelAndView projectUpdate(HttpServletRequest request, ModelAndView mv, ProjectSub ps, ProjectMember pm, Project p,
+						@RequestParam(name="prj_update_id") String prj_update_id, 
+						@RequestParam(name="project_update_title") String project_update_title, 
+						@RequestParam(name="project_std_update_date") String project_std_update_date,
+						@RequestParam(name="project_end_update_date") String project_end_update_date
+						){
+						
+					if(project_std_update_date == null || project_end_update_date == null) {
+						p.setProject_id(prj_update_id);
+						p.setProject_title(project_update_title);
+						pService.updateTitleProject(p);
+					}else {
+						Date prjStartDate; // 삭제 시작일
+						Date prjEndDate; // 삭제 시작일
+						Date currentDate; // 현재날짜 Date
+						String oTime = ""; // 현재날짜
+						String prjStatus = null;
+	
+						SimpleDateFormat mSimpleDateFormat = new SimpleDateFormat ( "yyyy-MM-dd", Locale.KOREA );
+	
+						Date currentTime = new Date();
+						try {
+							
+								java.sql.Date project_std_update =java.sql.Date.valueOf(project_std_update_date);	
+								java.sql.Date project_end_update =java.sql.Date.valueOf(project_end_update_date);	
+								oTime = mSimpleDateFormat.format ( currentTime ); //현재시간 (String)
+	
+	
+	
+						
+								
+								
+								prjEndDate = mSimpleDateFormat.parse( project_end_update_date );
+								prjStartDate = mSimpleDateFormat.parse(project_std_update_date);
+	
+								currentDate =  mSimpleDateFormat.parse( oTime );
+	
+													
+	
+								int stdCompare = currentDate.compareTo( prjStartDate ); // 날짜비교
+								int endCompare = currentDate.compareTo( prjEndDate ); // 날짜비교
+	
+								if (endCompare >= 0 && stdCompare >0){ // 현재날짜가 삭제 시작일 후 인 경우
+									prjStatus = "종료";					
+	
+								} else if (endCompare < 0 && stdCompare >= 0) { // 현재날짜가 삭제 시작일 전 인 경우
+	
+									prjStatus = "진행중";
+	
+	
+								} else if(stdCompare <0 && endCompare < 0) { // 현재날짜가 삭제일 인 경우
+	
+									prjStatus = "진행예정";
+								}
+								
+									p.setProject_id(prj_update_id);
+									p.setProject_title(project_update_title);
+									p.setProject_std_date(project_std_update);
+									p.setProject_end_date(project_end_update);
+									p.setProject_status(prjStatus);
+									pService.updateProject(p);
+									
+									mv.setViewName("redirect:projectlist.do");
+							
+						
+	
+							System.out.println("성공");
+							
+						}catch (Exception e) {
+							e.printStackTrace();
+							System.out.println("실패");
+							mv.addObject("message", e.getMessage());
+							mv.setViewName("project/projectlist.do");
+						}
+					
+					}
+
+					return mv;
+				}
+				
+				
+				//프로젝트 히스토리 작성
+				@RequestMapping(value = "/historyInsert.do", method = RequestMethod.POST)
+				public ModelAndView historyInsert(ProjectDetail pd, 
+						@RequestParam(name = "upload_project_file", required = false) MultipartFile report, @RequestParam(name="pid") String pid,
+						@RequestParam(name="psid", required = false) String psid, 
+						@RequestParam(name="sessionId") String id, 
+						@RequestParam(name="project_datail_content") String project_datail_content,
+						@RequestParam(name="stauts") String stauts,
+						HttpServletRequest request, ModelAndView mv) {
+					try {
+						if (report != null && !report.equals("")) {
+							saveFile(report, request);
+							System.out.println(pid);
+							System.out.println(psid);
+						
+							pd.setProject_datail_file(report.getOriginalFilename());
+							pd.setId(id);
+							pd.setProject_datail_status(stauts);
+							pd.setProject_datail_content(project_datail_content);
+							pd.setProject_id(pid);
+							pd.setProject_sub_id(psid);
+							System.out.println("pdpd : " +pd);
+							pService.historyInsert(pd);
+							
+							mv.setViewName("redirect:projectHistory.do?subid="+psid+"&pid="+pid+"");
+						}else {
+							pd.setId(id);
+							pd.setProject_datail_status(stauts);
+							pd.setProject_datail_content(project_datail_content);
+							pd.setProject_id(pid);
+							pd.setProject_sub_id(psid);
+							pService.historyInsert(pd);
+							mv.setViewName("redirect:projectHistory.do?subid="+psid+"&pid="+pid+"");
+						}
+							
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+					return mv;
+				}
+				
+				//프로젝트 히스토리 업데이트
+				@RequestMapping(value = "/projectHistoryUpdate.do", method = RequestMethod.POST)
+				public ModelAndView projectHistoryUpdate(ProjectDetail pd, 
+						@RequestParam(name = "update_file", required = false) MultipartFile report, 
+						@RequestParam(name="pid") String pid,
+						@RequestParam(name="subid", required = false) String subid,
+						@RequestParam(name="update_content") String project_datail_content,
+						@RequestParam(name="update_stauts") String stauts,
+						@RequestParam(name="pdid") String project_datail_id,
+						HttpServletRequest request, ModelAndView mv) {
+					try {
+						
+						//현재 project_datail_id에 저장된 파일명을 가져와지운다
+						//view에서 가져온 파일명을 업데이트(저장) 시켜준다.
+						//리스트에 반환한다.
+						
+						String befor_file = pService.historyFileName(project_datail_id);
+						System.out.println("befor_file : "+befor_file);
+						if (report != null && !report.equals("")) {
+							removeFile(befor_file, request);
+							saveFile(report, request);
+							System.out.println(pid);
+							System.out.println(subid);
+						
+							pd.setProject_datail_file(report.getOriginalFilename());
+							pd.setProject_datail_status(stauts);
+							pd.setProject_datail_content(project_datail_content);
+							pd.setProject_datail_id(project_datail_id);
+							pService.historyUpdateFile(pd);
+							mv.setViewName("redirect:projectHistory.do?subid="+subid+"&pid="+pid+"");
+						}else {
+							mv.setViewName("redirect:projectHistory.do?subid="+subid+"&pid="+pid+"");							
+						}
+							
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+					return mv;
+				}
+
+					//히스토리 삭제
+					@RequestMapping(value = "/projectHistoryDelete.do", method = RequestMethod.POST)
+					@ResponseBody
+					public Map<String, Object> projectHistoryDelete(HttpServletResponse response, HttpServletRequest request, ProjectDetail pd) {
+						Map<String, Object> map = new HashMap<String, Object>();
+						try {
+							request.setCharacterEncoding("UTF-8");
+							response.setContentType("text/html; charset=UTF-8");
+							String project_datail_id = pd.getProject_datail_file();
+							String file = pService.historyFileName(project_datail_id);
+							removeFile(file, request);
+							pService.projectHistoryDelete(pd);
+							map.put("sucess", "성공");
+							
+							
+						} catch (Exception e) {
+							map.put("fail", "실패");
+							
+						}
+						return map;
+					}
+					//댓글삭제
+					@RequestMapping(value = "/projectCommentDelete.do", method = RequestMethod.POST)
+					@ResponseBody
+					public Map<String, Object> projectCommentDelete(HttpServletResponse response,HttpSession session, HttpServletRequest request, ProjectComment pc) {
+						Map<String, Object> map = new HashMap<String, Object>();
+						try {
+							String name = (String) session.getAttribute("loginId");
+							System.out.println("세션이름" + name);
+							
+							request.setCharacterEncoding("UTF-8");
+							response.setContentType("text/html; charset=UTF-8");
+							String project_comment_id = pc.getProject_comment_id();
+							System.out.println(project_comment_id);
+							System.out.println(pc.getId());
+							if(name.equals(pc.getId())) {
+								int delAck = pService.projectCommentDelete(pc);
+								if(delAck == 1) {
+									map.put("sucess", "삭제되었습니다");								
+								}else {
+									map.put("fail", "실패하였습니다");								
+									
+								}
+							}else {
+								map.put("fail", "작성자만 삭제 할 수 있습니다.");			
+							}
+							
+							
+							
+						} catch (Exception e) {
+							map.put("fail", "실패하였습니다.");
+							
+						}
+						return map;
+					}
+					//대댓글삭제
+					@RequestMapping(value = "/projectReCommentDelete.do", method = RequestMethod.POST)
+					@ResponseBody
+					public Map<String, Object> projectReCommentDelete(HttpServletResponse response,HttpSession session, HttpServletRequest request, ProjectReComment prc) {
+						Map<String, Object> map = new HashMap<String, Object>();
+						try {
+							String name = (String) session.getAttribute("loginId");
+							System.out.println("세션이름" + name);
+							
+							request.setCharacterEncoding("UTF-8");
+							response.setContentType("text/html; charset=UTF-8");
+							String project_recomment_id = prc.getProject_recomment_id();
+							System.out.println(project_recomment_id);
+							System.out.println(prc.getId());
+							if(name.equals(prc.getId())) {
+								int delAck = pService.projectReCommentDelete(prc);
+								if(delAck == 1) {
+									map.put("sucess", "삭제되었습니다");								
+								}else {
+									map.put("fail", "실패하였습니다");								
+									
+								}
+							}else {
+								map.put("fail", "작성자만 삭제 할 수 있습니다.");			
+							}
+							
+							
+							
+						} catch (Exception e) {
+							map.put("fail", "실패하였습니다.");
+							
+						}
+						return map;
+					}
+					
+					//댓글입력
+					@RequestMapping(value = "/projecthistoryComment.do", method = RequestMethod.POST)
+					@ResponseBody
+					public Map<String, Object> projecthistoryComment(HttpServletResponse response, HttpServletRequest request, ProjectComment pc) {
+						Map<String, Object> map = new HashMap<String, Object>();
+						try {
+							request.setCharacterEncoding("UTF-8");
+							response.setContentType("text/html; charset=UTF-8");
+							if(pc.getProject_comment_content()== null || pc.getProject_comment_content().equals("")) {
+								map.put("fail", "댓글을 입력해 주세요.");
+							}else {
+								String getProject_comment_content = pc.getProject_comment_content();
+								String getProject_datail_id = pc.getProject_datail_id();
+								String getId = pc.getId();
+								
+								System.out.println(getProject_comment_content);
+								System.out.println(getProject_datail_id);
+								System.out.println(getId);
+								List<ProjectComment> pcList = new ArrayList<ProjectComment>();
+								int a = pService.projectCommentWirte(pc);
+								System.out.println("성공?: "  +a);
+								if(a == 1) {
+									pcList = pService.projectCommentInsertList(pc);
+									System.out.println(pcList);
+									map.put("success", "성공");
+									map.put("commentList", pcList);
+									
+								}else if(a==0) {
+									map.put("fail", "실패");
+								}
+							}
+							
+							
+							
+							
+							
+						} catch (UnsupportedEncodingException e) {
+							map.put("fail", "실패");						
+						}
+						
+						return map;
+					}
+					
+					//댓글리스트
+					@RequestMapping(value = "/projecthistoryCommentList.do", method = RequestMethod.POST)
+					@ResponseBody
+					public Map<String, Object> projecthistoryCommentList(HttpServletResponse response, HttpServletRequest request, ProjectComment pc) {
+						Map<String, Object> map = new HashMap<String, Object>();
+						try {
+							request.setCharacterEncoding("UTF-8");
+							response.setContentType("text/html; charset=UTF-8");
+								String getProject_datail_id = pc.getProject_datail_id();
+								String getId = pc.getId();
+								
+								System.out.println(getProject_datail_id);
+								System.out.println(getId);
+								List<ProjectComment> pcList = new ArrayList<ProjectComment>();
+								
+									pcList = pService.projectCommentList(pc);
+									System.out.println(pcList);
+									map.put("success", "성공");
+									
+									map.put("commentList", pcList);
+									/*
+									 * select a.*, b.name, r.project_recomment_content, b.profile from
+									 * project_recomment r, project_comment a, member b where r.id = b.id and
+									 * a.project_comment_id = r.project_comment_id and a.project_datail_id='64';
+									 */
+
+						} catch (UnsupportedEncodingException e) {
+							map.put("fail", "실패");						
+						}
+						
+						return map;
+					}
+					
+					
+					//대댓글 입력
+					@RequestMapping(value = "/projecthistoryReCommentInsert.do", method = RequestMethod.POST)
+					@ResponseBody
+					public Map<String, Object> projecthistoryReCommentInsert(HttpServletResponse response, HttpServletRequest request, ProjectReComment prc) {
+						Map<String, Object> map = new HashMap<String, Object>();
+						try {
+							request.setCharacterEncoding("UTF-8");
+							response.setContentType("text/html; charset=UTF-8");
+							if(prc.getProject_recomment_content()== null || prc.getProject_recomment_content().equals("")) {
+								map.put("fail", "댓글을 입력해 주세요.");
+							}else {
+								String getProject_comment_id = prc.getProject_recomment_content();
+								String project_recomment_content = prc.getProject_comment_id();
+								String getId = prc.getId();
+								
+								System.out.println(getProject_comment_id);
+								System.out.println(project_recomment_content);
+								System.out.println(getId);
+								List<ProjectReComment> prcList = new ArrayList<ProjectReComment>(); 
+								try {
+									pService.projecthistoryReCommentInsert(prc);
+									System.out.println("인서트 성공!");
+									prcList =pService.projectreReCommentInsertList(prc); 
+									System.out.println(prcList);
+									System.out.println("aaa");
+									  map.put("success", "성공");
+									  map.put("recommentList", prcList);
+								}catch (Exception e) {
+									 map.put("fail", "실패"); 
+								}
+								
+								  
+								  
+								 
+							}
+							
+							
+							
+							
+							
+						} catch (UnsupportedEncodingException e) {
+							map.put("fail", "실패");						
+						}
+						
+						return map;
+					}
+				
+					//대댓글 리스트 ajax
+					@RequestMapping(value = "/projecthistoryReCommentList.do", method = RequestMethod.POST)
+					@ResponseBody
+					public Map<String, Object> projecthistoryReCommentList(HttpServletResponse response, HttpServletRequest request, ProjectReComment prc) {
+						Map<String, Object> map = new HashMap<String, Object>();
+						try {
+								request.setCharacterEncoding("UTF-8");
+								response.setContentType("text/html; charset=UTF-8");
+							
+								String getProject_comment_id = prc.getProject_comment_id();
+								
+								System.out.println("a" + getProject_comment_id);
+								
+								List<ProjectReComment> prcList = new ArrayList<ProjectReComment>();
+								prcList = pService.projectReCommentList(prc);
+								System.out.println("댓글 리스트 : " + prcList.size());
+								map.put("recommentList", prcList);
+
+						} catch (UnsupportedEncodingException e) {
+							map.put("fail", "실패");						
+						}
+						
+						return map;
+					}
+					
+					
+				//파일저장
+				private void saveFile(MultipartFile report, HttpServletRequest request) {
+					String root = request.getSession().getServletContext().getRealPath("resources");
+					String savePath = root + "\\projectFiles";
+					File folder = new File(savePath);
+					if (!folder.exists()) {
+						folder.mkdir(); // 폴더가 없다면 생성한다.
+					}
+					String filePath = null;
+					try {
+						// 파일 저장
+						
+						filePath = folder + "\\" + report.getOriginalFilename();
+						report.transferTo(new File(filePath)); // 파일을 저장한다
+						
+					} catch (Exception e) {
+						
+					}
+				}
+				//파일삭제
+				private void removeFile(String project_file, HttpServletRequest request) {
+					String root = request.getSession().getServletContext().getRealPath("resources");
+					String savePath = root + "\\uploadFiles";
+
+					String filePath = savePath + "\\" + project_file;
+					try {
+						// 파일 저장
+						File delFile = new File(filePath);
+						delFile.delete();
+
+						System.out.println("파일 삭제가 완료되었습니다.");
+					} catch (Exception e) {
+						System.out.println("파일 삭제 에러 : " + e.getMessage());
+					}
+				}
+				//파일 다운로드
+				@RequestMapping("/download.do")
+				public ModelAndView download(@RequestParam HashMap<Object, Object> params, ModelAndView mv) {
+					String fileName = (String) params.get("fileName");
+					String fullPath = FILE_SERVER_PATH + "/" + fileName;
+					File file = new File(fullPath);
+					
+					mv.setViewName("downloadView");
+					mv.addObject("downloadFile", file);
+					return mv;
+				}
+}
 
 ```
-annual인서트시, 로그인한 사용자의 아이디 값과, 외래키로 적용되어있는 payment_id를 모두 파라메터로 들고가야하는 애로사항이 있었습니다. 
-따라서 insert시 SEQ_PAYMENT_ANNUAL 시퀀스만을 select한후 아래와 같이 DAO와 Sevice에서 적용시켰습니다. 
-#### AnnualDao.java
-```jsx
 
-```
-AnnualService.java
+프로젝트 관련 Controller 소스코드입니다. Service나 Dao에서의 작업은 없어 Controller소스만 올리겠습니다.
+주로 프로젝트 기간 관련된 계산으로 진행중인지 종료중인 프로젝트인지 나누는 소스코드와 삭제 수정 불러오기 코드들이 있습니다.
+파일 업로드 다운로드 기능도 구현하였습니다.
+#### MemberController.java
 ```jsx
+	 //이메일 중복확인 ajax
+	 @RequestMapping(value = "/emailChk.do", method = RequestMethod.POST)
+	 @ResponseBody
+	 public Object emailChk(HttpServletResponse response, HttpServletRequest request, Member m) {
+		List<Member> mlist = new ArrayList<Member>();
+		int result = 0;
+		mlist = mService.emailChk(m);
+		System.out.println("호출");
+		System.out.println(mlist.size());
+		if(mlist.size() > 0) {
+			result = 1;
+		}
+		return result;
+	}
 
+	//사원 입력 메서드
+	@RequestMapping(value = "/insertmember.do", method = RequestMethod.POST)
+	public ModelAndView insertmember(Member m,HttpServletRequest request,@RequestParam(name="profileimg")MultipartFile report, ModelAndView mv) throws IOException {
+		
+		String root = request.getSession().getServletContext().getRealPath("resources");
+		String savePath = root + "\\profileImg";
+		File folder = new File(savePath);
+		saveFile(report, request);
+		String filePath = null;
+		filePath = folder + "\\" + report.getOriginalFilename();
+		try {
+			// 파일저장
+			System.out.println(report.getOriginalFilename() + "을 저장합니다.");
+			System.out.println("저장 경로 : " + savePath);
+			filePath = folder + "\\" + report.getOriginalFilename();
+			report.transferTo(new File(filePath)); // 파일을 저장한다
+			System.out.println("파일명 : " + report.getOriginalFilename());
+			System.out.println("파일 경로 : " + filePath);
+			System.out.println("파일 전송이 완료되었습니다.");
+		} catch (Exception e) {
+			System.out.println("파일 전송 에러 : " + e.getMessage());
+		}
+		m.setProfile(report.getOriginalFilename());
+		mService.insertMember(m);
+		mv.setViewName("redirect:memberlist");
+		return mv;
+	}
 ```
-#### EchoHandler.java
-```jsx
+이메일 중복확인 메서드는 비동기로 통신하여 요청단에 0과 1의 결과값을 전달하도록 구현하였습니다.
+사원정보 입력을 위한 메서드 입니다. 
+입력 시 회원의 프로필 사진을 가져와 저장 하도록 구현 하였습니다.
 
-```
-사용자가 접속했다면 모든 사용자에게 접속중임을 알리며, 수신 참조자로 선택됐을시에는 해당 사용자에게만 알림을 보내는 소스 코드입니다. 
+
