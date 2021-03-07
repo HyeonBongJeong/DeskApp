@@ -1,4 +1,3 @@
-- # fine semiPrj
 ## :pushpin: DESK APP :pushpin:
 협업을 위한 그룹웨어
 
