@@ -56,7 +56,7 @@
 ```
 gtag로 화면 전환시 로딩 페이지를 보여주었습니다. 
 
-#### project.js
+#### project.jsp script
  ```jsx
 /* 사원추가 */
  $(document).ready(function() {
@@ -483,11 +483,710 @@ gtag로 화면 전환시 로딩 페이지를 보여주었습니다.
  만들어진 프로젝트를 수정하거나 삭제하는 코드입니다. 
  ajax를 통해 비동기로 처리하였습니다.
  자신이 만든 프로젝트가 아니라면 삭제/수정 버튼을 보이지 않게 구현하였습니다.
-  ```jsx
- ```
-  ```jsx
- ```
 
+#### projectDetail.jsp script
+  ```jsx
+// 차트 생성
+am4core.ready(function() {
+
+// Themes begin
+am4core.useTheme(am4themes_animated);
+// Themes end
+
+var chart = am4core.create("chartdiv", am4charts.XYChart);
+chart.hiddenState.properties.opacity = 0; // this creates initial fade-in
+
+chart.paddingRight = 30;
+chart.dateFormatter.inputDateFormat = "yyyy-MM-dd";
+
+var colorSet = new am4core.ColorSet();
+colorSet.saturation = 0.4;
+var result = Math.floor(Math.random() * 30) + 1;
+
+console.log(result);
+//차트에 들어갈 데이터
+chart.data = [ 
+<c:forEach items="${projectSubList}" var="pvo" varStatus="s" >	
+
+{
+  "category": "${pvo.project_sub_title}",
+  "start": "${pvo.project_sub_std_date}",
+  "end": "${pvo.project_sub_end_date}",
+  "color": colorSet.getIndex(${s.index}),
+  "task": "${pvo.project_sub_title}"
+},
+</c:forEach>
+];
+
+
+
+chart.dateFormatter.dateFormat = "yyyy-MM-dd";
+chart.dateFormatter.inputDateFormat = "yyyy-MM-dd";
+
+var categoryAxis = chart.yAxes.push(new am4charts.CategoryAxis());
+categoryAxis.dataFields.category = "category";
+categoryAxis.renderer.grid.template.location = 0;
+categoryAxis.renderer.inversed = true;
+
+var dateAxis = chart.xAxes.push(new am4charts.DateAxis());
+dateAxis.renderer.minGridDistance = 50;
+dateAxis.baseInterval = { count: 40, timeUnit: "day" };
+dateAxis.max = new Date().getTime();
+//dateAxis.strictMinMax = true;
+dateAxis.renderer.tooltipLocation = 0;
+
+var series1 = chart.series.push(new am4charts.ColumnSeries());
+series1.columns.template.height = am4core.percent(70);
+series1.columns.template.tooltipText = "{task}: [bold]{openDateX}[/] - [bold]{dateX}[/]";
+
+series1.dataFields.openDateX = "start";
+series1.dataFields.dateX = "end";
+series1.dataFields.categoryY = "category";
+series1.columns.template.propertyFields.fill = "color"; // get color from data
+series1.columns.template.propertyFields.stroke = "color";
+series1.columns.template.strokeOpacity = 1;
+
+chart.scrollbarX = new am4core.Scrollbar();
+
+}); // end am4core.ready()
+ ```
+AM Chart로 프로젝트에 대한 상세일정을 간트차트로 구현한 코드입니다.
+화면이 넘어올 때 가져온 데이터를 jstl을 활용하여 시작일과 종료일을 정하여 차트에 뿌려주었습니다.
+
+#### projectHistory.jsp script
+ ```jsx
+ /* 히스토리 추가시 검증*/
+			$("#histryAddBtn").click(function(){
+				var content = $('textarea[name=project_datail_content]').val().trim();				
+				var status = $("#stauts option:selected").val().trim();
+				
+			
+				
+				if(content == ""){
+					$('textarea[name=project_datail_content]').css("border","2px solid red");
+					alert('내용을 입력해 주세요');
+					return false;
+				}else if(status == ""){
+					alert('현재상태를 정해 주세요');	
+					return false;
+				}
+				
+				if(content != ""){
+					$('textarea[name=prj-content]').css("border","1px solid black");
+				}
+			
+			
+			});
+ ```
+ 작업에 대한 히스토리를 추가할 경우에 필요한 항목이 비어있는지 확인하는 코드입니다.
+ ```jsx
+ //히스토리 댓글달기 눌렀을 때 불러오기
+			$(document).on("click", ".comment", function() {
+				
+			
+				var commentArea = $(this).parent().parent().find('.commentArea');
+				
+				var project_datail_id = commentArea.find('input[name=project_datail_id]').val();
+				var sessionId = commentArea.find('input[name=sessionId]').val();
+				var commentList = commentArea.find('.commentList');
+				var chk_content_id = commentList.find('.comments');
+				
+				commentArea.css("display","block");
+				
+				 $.ajax({
+		                url : "${pageContext.request.contextPath}/projecthistoryCommentList.do",
+		                type : 'POST',
+		                dataType : 'json',
+		                data : {
+		                project_datail_id : project_datail_id,
+		               	id : sessionId
+		                },
+		                beforeSend : function() {
+		                    console.log('Ajax submit 보내기전');
+		                },
+		                success : function(data) {
+		                	if(chk_content_id.length >= data.commentList.length){
+		                	}else{
+		                		for(var i = 0; i<data.commentList.length; i++){
+			                    	a = chk_content_id.length;
+			                		console.log(a.length);
+			                		commentList.append('<div class="comments" style="width: 100%; display: block;">'
+				    						+'<div class="comments_block" style="width: 100%; display: flex">'
+		                					+	'<div style="width: 5%; text-align: center;">'
+				    						+		'<img src="${pageContext.request.contextPath}/resources/profileImg/'+data.commentList[i].profile+'" style="width: 30px; height:30px; border-radius: 50%;">'
+				    						+		'<input type="hidden" name="sessionIds" value="'+data.commentList[i].id+'">'
+				    						+		'<input type="hidden" name="project_detail_id" value="'+data.commentList[i].project_detail_id+'">'
+				    						+'</div>'
+				    						+	'<div class="commentPrints" style="width: 70%; word-break:break-all;">'
+				    						+	'<div class="comment_user_name" style="font-size: 12px; font-weight: bold;">'+data.commentList[i].name+'</div>'
+				    						+	'<div class="comment_content">'+data.commentList[i].project_comment_content+'</div>'
+ 				    						+	'<input type="hidden" name="project_comment_ids" value="'+data.commentList[i].project_comment_id+'">'
+				    						+'</div>'
+					    						+'<div class="comment-nav" style="width: 22%; margin-left: 2%;">'
+					    						+	'<label class="commnet_delete" style="margin-left:135px; text-decoration: underline; color:red; font-size: 10px; cursor: pointer;">삭제하기</label>'
+					    						+'</div>'
+				    						+'</div>'
+			    						+'<div class="recommentWriteFMArgin" style="margin-left:5%">'
+										+'<div class="recommentWriteF" style="width: 90%; display: none;">'
+										+	'<img src="${pageContext.request.contextPath}/resources/profileImg/${sessionScope.loginProfile }" style="width: 30px; height:30px; border-radius: 50%;">'
+										+	'<input type="hidden" name="sessionIdse" value="${sessionScope.loginId}">'
+										+	'<input type="hidden" name="project_comment_id" value="'+data.commentList[i].project_comment_id+'">'
+										+	'<input type="text" name="recommentWrite" style="width:90%; height: 40px;">'
+										+	'<input class="recommentWriteOk" type="button" style="margin-left: 5px; margin-bottom:20px; width: 65px; height: 40px; background-color: #0b132b; border-radius: 5%; color:white; font-size: 13px; text-align: center; line-height:40px;" value="전송">'
+						 				+'</div> '
+						 				+'</div> '
+						 				+'<label class="addReComment" style="margin-left:40px; font-size:10px; cursor:pointer; text-decoration:underline;">댓글 더보기</label>'
+						 				+'<div class="recomments" style="margin-left:5% display:block">'
+						 				+'</div>'
+			    						+'</div>'
+			    						+'<hr>');
+			                		
+			                  
+			                		
+			                  	}
+			                	chk_content_id = null;
+			                	
+			                	/* 댓글 ajax */
+		                	}
+		                	
+		                	
+		                }, 
+		                error : function(data) {
+		                    console.log('Ajax submit error');
+		                },
+		                complete : function() {
+		                	
+		                    console.log('Ajax submit complete');
+		                }
+		            });	 
+
+			});
+ ```
+ 댓글은 댓글 달기를 눌렀을 때 가져오도록 구현하였습니다. 
+ ajax를 통해 비동기로 처리하였습니다.
+ ```jsx 
+ 			//히스토리 댓글 닫기
+			$('.closeCommnetArea').click(function() {
+				var closeCommentArae = $(this).parent();
+				var recommentFrm_block = $(this).parent().parent().parent().parent().find('.recommentWriteF');
+				
+				closeCommentArae.css("display","none")
+				recommentFrm_block.css("display","none");
+				
+			})
+ ```
+ 프로젝트 댓글은 접었다 펼칠 수 있어 닫는 기능도 구현하였습니다.
+ ```jsx 
+ //히스토리 대댓글 펼칠때 대댓글 불러오기
+		 	$(document).on("click",".addReComment", function() {
+		 		var recommentFrm_block = $(this).parent().find('.recommentWriteF');
+		 		var recomments = $(this).parent().find('.recomments');
+		 		var project_comment_id = $(this).parent().find('input[name=project_comment_id]').val();
+				console.log(project_comment_id);
+				console.log(recomments);
+		 		var text = $(this).text();
+				if(text == '댓글 더보기'){
+					console.log('aaaaaa');
+					
+					 $.ajax({
+			                url : "${pageContext.request.contextPath}/projecthistoryReCommentList.do",
+			                type : 'POST',
+			                dataType : 'json',
+			                data : {
+			                	project_comment_id : project_comment_id
+			                	
+			                },
+			                beforeSend : function() {
+			                    console.log('Ajax submit 보내기전');
+			                },
+			                success : function(data) {
+			                	for(var i = 0; i<data.recommentList.length; i++){
+			                 	recomments.prepend(
+			                			'<div class="recommnet_Print" style="margin-left: 2%; margin-top: 10px; width: 100%; display: flex;">'
+										+'	<div style="width: 5%; text-align: center;">'
+										+'			<img src="${pageContext.request.contextPath}/resources/profileImg/'+data.recommentList[i].profile+'" style="width: 30px; height:30px; border-radius: 50%;">'
+										+'			<input type="hidden" name="user_id" value="'+data.recommentList[i].id+'">'
+										+'	</div>'
+										+'	<div class="recommentPrints" style="width: 98%; word-break:break-all;">'
+										+'		<input type="hidden" name="project_recomment_id" value="'+data.recommentList[i].project_recomment_id+'">'
+										+'		<div class="recomment_user_name" style="font-size: 12px; font-weight: bold;">'+data.recommentList[i].name+'</div>'
+										+'		<div class="recomment_content">'+data.recommentList[i].project_recomment_content+'</div>'
+										+'		<label class="recommnet_delete" style="text-decoration: underline; color:red; font-size: 10px; cursor: pointer;">삭제하기</label>'
+										+'	</div>'
+										
+										
+										+'</div>'
+										);
+			                	
+			                	}
+			                 
+			                	console.log('성공');
+			                
+			                }, error : function(data) {
+			                    console.log('Ajax submit error');
+			                
+			                }, complete : function() {
+			                    console.log('Ajax submit complete');
+			                }
+					  }); 
+					
+					
+					recommentFrm_block.css("display","flex");
+					$(this).text('닫기');
+					
+					
+				
+					
+					
+					
+				}else{
+					$(this).text('댓글 더보기');
+					recommentFrm_block.css("display","none");
+					recomments.empty();
+				}
+			})
+ ```
+ 대댓글 또한 댓글과 마찬가지로 접었다 펼칠 수 있게 구현하였고 펼칠때마다 비동기로 대댓글을 다시 불러오도록 구현하였습니다.
+ ```jsx 
+ //히스토리 게시물 수정
+			$(".update").click(function() {
+				var closeCommentArae = $(this).parent().parent().find('.project_datail_id').val();
+				var sessionId = $('input[name=sessionId]').val();
+				var user_id = $(this).parent().parent().find('input[name=user_id]').val();
+				if(sessionId != user_id){
+					alert("작성자만 수정가능합니다.")
+			
+				}else{
+					$(".update").attr({"data-toggle":"modal", "data-target":"#Medium-modal"});
+					$('#Medium-modal').modal('show');
+				$('input[name=pdid]').val(closeCommentArae);
+				console.log(closeCommentArae);
+					
+				}
+			})
+ ```
+ 수정권한은 자신이 작성한 히스토리에 관해서만 수정버튼이 보이도록 하였고 수정버튼을 눌렀을 때 수정 모달이 뜨도록 구현하였습니다.
+ ```jsx 
+ 			//히스토리 게시물 삭제
+			$(".delete").click(function() {
+				var sessionId = $('input[name=sessionId]').val();
+				var user_id = $(this).parent().parent().find('input[name=user_id]').val();
+				var project_datail_id = $(this).parent().parent().find('.project_datail_id').val();
+				var li = $(this).parent().parent().parent();
+				
+				console.log(li);
+				
+				
+				if(sessionId != user_id){
+					alert("작성자만 삭제가능합니다.")
+				}else{
+					if(confirm("정말 삭제하시겠습니까 ?") == true){
+						
+						
+		 	 		$.ajax({
+							url : "${pageContext.request.contextPath}/projectHistoryDelete.do",
+							method : "POST",
+							data : {
+								project_datail_id : project_datail_id
+							},
+							success : function(data) {
+								li.remove();
+								var a = data.sucess;
+								alert(a);
+							},
+							error : function(request, status,
+									error) {
+
+								alert("code:" + request.status
+										+ "\n" + "message:"
+										+ request.responseText
+										+ "\n" + "error:"
+										+ error);
+							}
+						});	 
+					}
+						
+				else{
+					return;
+					}
+				}
+			})
+			
+			
+			//대댓글 삭제
+			$(document).on("click",".recommnet_delete", function() {
+				var project_recomment_id = $(this).parent().parent().find('input[name=project_recomment_id]').val();
+				console.log(project_recomment_id);
+				var id = $(this).parent().parent().find('input[name=user_id]').val();
+				console.log(id);
+				var recommnet_Print = $(this).parent().parent().parent();
+				console.log(recommnet_Print);
+				if(confirm("정말 삭제하시겠습니까 ?") == true){ 
+					 $.ajax({
+						url : "${pageContext.request.contextPath}/projectReCommentDelete.do",
+						method : "POST",
+						data : {
+							project_recomment_id : project_recomment_id,
+							id : id
+						},
+						success : function(data) {
+						if(data.fail){
+							alert(data.fail);
+							
+						}else{
+							alert(data.sucess);
+							recommnet_Print.remove();
+						}
+						},
+						error : function(request, status,
+								error) {
+
+							alert("code:" + request.status
+									+ "\n" + "message:"
+									+ request.responseText
+									+ "\n" + "error:"
+									+ error);
+						}
+					});	  
+				}else{
+					return;
+				}  
+				
+				
+				
+			})
+			
+			
+			
+			
+			
+			//댓글 삭제
+			$(document).on("click",".commnet_delete", function() {
+				var project_comment_id = $(this).parent().parent().parent().find('input[name=project_comment_ids]').val();
+				var id = $(this).parent().parent().parent().find('input[name=sessionIds]').val();
+				var comments = $(this).parent().parent().parent();
+				console.log(comments);
+				console.log(project_comment_id);
+				console.log(id);
+				if(confirm("정말 삭제하시겠습니까 ?") == true){
+					$.ajax({
+						url : "${pageContext.request.contextPath}/projectCommentDelete.do",
+						method : "POST",
+						data : {
+							project_comment_id : project_comment_id,
+							id : id
+						},
+						success : function(data) {
+						if(data.fail){
+							alert(data.fail);
+						}else{
+							comments.remove();
+						}
+						},
+						error : function(request, status,
+								error) {
+
+							alert("code:" + request.status
+									+ "\n" + "message:"
+									+ request.responseText
+									+ "\n" + "error:"
+									+ error);
+						}
+					});	 
+				}else{
+					return;
+				}
+				
+				
+				
+			})
+ ```
+ 히스토리와 히스토리에 관련된 댓글 대댓글의 삭제는 모두 비동기로 처리하였습니다.
+ ```jsx 
+ //대댓글 작성
+			$(document).on("click", ".recommentWriteOk", function() {
+				var project_recomment_content = $(this).parent().parent().parent().find('input[name=recommentWrite]').val();
+				var comments = $(this).parent().parent().parent().find('.recomments');
+				var project_comment_id = $(this).parent().parent().parent().find('input[name=project_comment_id]').val();
+				var id = $(this).parent().parent().parent().parent().parent().find('input[name=sessionId]').val();
+				if(project_recomment_content == null || project_recomment_content == ''){
+					alert('답글을 입력해 주세요.'); 
+				}else{
+					
+					  $.ajax({
+			                url : "${pageContext.request.contextPath}/projecthistoryReCommentInsert.do",
+			                type : 'POST',
+			                dataType : 'json',
+			                data : {
+			                	project_recomment_content : project_recomment_content,
+			                	project_comment_id : project_comment_id,
+			                	id : id
+			                },
+			                beforeSend : function() {
+			                    console.log('Ajax submit 보내기전');
+			                },
+			                success : function(data) {
+			                	console.log(data.recommentList.length)
+			                	comments.prepend(
+			                			'<div class="recommnet_Print" style="margin-left: 2%; margin-top: 10px; width: 100%; display: flex;">'
+										+'	<div style="width: 5%; text-align: center;">'
+										+'			<img src="${pageContext.request.contextPath}/resources/profileImg/'+data.recommentList[0].profile+'" style="width: 30px; height:30px; border-radius: 50%;">'
+										+'			<input type="hidden" name="user_id" value="'+data.recommentList[0].id+'">'
+										+'	</div>'
+										+'	<div class="recommentPrints" style="width: 98%; word-break:break-all;">'
+										+'		<input type="hidden" name="project_recomment_id" value="'+data.recommentList[0].project_recomment_id+'">'
+										+'		<div class="recomment_user_name" style="font-size: 12px; font-weight: bold;">'+data.recommentList[0].name+'</div>'
+										+'		<div class="recomment_content">'+data.recommentList[0].project_recomment_content+'</div>'
+										+'		<label class="recommnet_delete" style="text-decoration: underline; color:red; font-size: 10px; cursor: pointer;">삭제하기</label>'
+										+'	</div>'
+										
+										
+										+'</div>'
+										);
+			                	
+			                	
+			                 	$('input[name=recommentWrite]').val('');	
+			                	
+			                
+			                }, error : function(data) {
+			                    console.log('Ajax submit error');
+			                
+			                }, complete : function() {
+			                    console.log('Ajax submit complete');
+			                }
+					  }); 
+					
+				}
+			});
+			
+			
+			//댓글 작성
+			$(document).on("click", ".commentWriteSubmit", function() {
+				var comment = $(this).parent().find('input[name=commentWrite]').val();
+				var project_datail_id = $(this).parent().find('input[name=project_datail_id]').val();
+				var sessionId = $(this).parent().find('input[name=sessionId]').val();
+				var commentList = $(this).parent().parent().find('.commentList');
+				console.log("인서트"+sessionId);
+				
+	            $.ajax({
+	                url : "${pageContext.request.contextPath}/projecthistoryComment.do",
+	                type : 'POST',
+	                dataType : 'json',
+	                data : {
+	                project_comment_content : comment,
+	                project_datail_id : project_datail_id,
+	               	id : sessionId
+	                },
+	                beforeSend : function() {
+	                    console.log('Ajax submit 보내기전');
+	                },
+	                success : function(data) {
+	                	var a = 0;
+	                	if(!data.commentList){
+	                		console.log("못받아옴");
+	                	}else{
+	                		for(var i = 0; i<data.commentList.length; i++){
+	                			commentList.append(
+	                					'<div class="comments" style="width: 100%; display: block;">'
+				    						+'<div class="comments_block" style="width: 100%; display: flex">'
+		                					+	'<div style="width: 5%; text-align: center;">'
+				    						+		'<img src="${pageContext.request.contextPath}/resources/profileImg/'+data.commentList[i].profile+'" style="width: 30px; height:30px; border-radius: 50%;">'
+ 				    						+		'<input type="hidden" name="commentIds" value="'+data.commentList[i].id+'">' 
+				    						+		'<input type="hidden" name="sessionIds" value="${sessionScope.loginId}">'
+				    						+'</div>'
+				    						+	'<div class="commentPrints" style="width: 70%; word-break:break-all;">'
+				    						+	'<div class="comment_user_name" style="font-size: 12px; font-weight: bold;">'+data.commentList[i].name+'</div>'
+				    						+	'<div class="comment_content">'+data.commentList[i].project_comment_content+'</div>'
+				    						+		'<input type="hidden" name="project_comment_id" value="'+data.commentList[i].project_comment_id+'">'
+				    						+'</div>'
+					    						+'<div class="comment-nav" style="width: 22%; margin-left: 2%;">'
+					    						+	'<label class="commnet_delete" style="margin-left:135px; text-decoration: underline; color:red; font-size: 10px; cursor: pointer;">삭제하기</label>'
+					    						+'</div>'
+				    						+'</div>'
+			    						
+				    				
+			    						+'<div class="recommentWriteFMArgin" style="margin-left:5%">'
+										+'<div class="recommentWriteF" style="width: 90%; display: none;">'
+										+	'<img src="${pageContext.request.contextPath}/resources/profileImg/'+data.commentList[i].profile+'" style="width: 30px; height:30px; border-radius: 50%;">'
+										+	'<input type="hidden" name="sessionIdse" value="'+data.commentList[i].id+'">'
+										+	'<input type="hidden" name="project_comment_id" value="'+data.commentList[i].project_comment_id+'">'
+										+	'<input type="text" name="recommentWrite" style="width:90%; height: 40px;">'
+										+	'<input class="recommentWriteOk" type="button" style="margin-left: 5px; margin-bottom:20px; width: 65px; height: 40px; background-color: #0b132b; border-radius: 5%; color:white; font-size: 13px; text-align: center; line-height:40px;" value="전송">'
+						 				+'</div> '
+						 				+'</div> '	
+						 				+'<label class="addReComment" style="margin-left:40px; font-size:10px; cursor:pointer; text-decoration:underline;">댓글 더보기</label>'
+						 				+'<div class="recomments" style="margin-left:5% display:block">'
+						 				+'</div>'
+			    						+'</div>'
+		               		
+							);
+		                  
+		                  	$('input[name=commentWrite]').val('');	
+		                  	}
+	                	}
+	                	
+	                	
+	                }, 
+	                error : function(data) {
+	                    console.log('Ajax submit error');
+	                },
+	                complete : function() {
+	                    console.log('Ajax submit complete');
+	                }
+	            });
+	     
+				
+			})
+ ```
+ 댓글과 대댓글도 비동기로 처리하여 작성하면 바로 추가되도록 구현하였습니다.
+ ### insertmember.jsp script
+ ```jsx 
+ //이메일 유효성 검증
+	$('input[name=email]').on("change", function() {
+		const regEmail = /^[0-9a-zA-Z]([-_\.]?[0-9a-zA-Z])*@[0-9a-zA-Z]([-_\.]?[0-9a-zA-Z])*\.[a-zA-Z]{2,3}$/i;
+		var email = $('input[name=email]').val();
+		if(regEmail.test(email)){
+			$('input[name=email]').css("border","1px solid black");
+			 $.ajax({
+	                url : "${pageContext.request.contextPath}/emailChk.do",
+	                type : 'POST',
+	                dataType : 'json',
+	                data : {
+	                	email : email
+	                	
+	                },
+	                beforeSend : function() {
+	                    console.log('Ajax submit 보내기전');
+	                },
+	                success : function(data) {
+	                	console.log(data);
+	                 if(data == 0){
+	                	 $('input[name=email]').css("border","1px solid green");
+	                 }else{
+	                	 alert("이미 존재하는 이메일 입니다.");
+	                	 $('input[name=email]').css("border","1px solid red");
+	                	 $('input[name=email]').focus();
+	                 }
+	               
+	                }, error : function(data) {
+	                    console.log('Ajax submit error');
+	                    $('input[name=email]').focus();
+	                }, complete : function() {
+	                    console.log('Ajax submit complete');
+	                }
+			  }); 
+		}else if(!regEmail.test(email)){
+			alert("이메일 형식에 알맞게 적어주세요");
+			$('input[name=email]').css("border","1px solid red");
+			$('input[name=email]').val('');
+			$('input[name=email]').focus();
+			
+		}
+		
+	})
+	//비밀번호 유효성검증
+	$('input[name=phone]').on("focusout", function() {
+		const regPhone = /^01([0|1|6|7|8|9])?([0-9]{3,4})?([0-9]{4})$/;
+		var phone = $('input[name=phone]').val();
+		console.log(phone);
+		if(regPhone.test(phone)){
+			$('input[name=phone]').css("border","1px solid black");
+		}else if(!regPhone.test(phone)){
+			$('input[name=phone]').css("border","1px solid red");
+			$('input[name=phone]').focus();
+		}
+		
+		
+	});
+ ```
+ 비밀번호와 이메일, 비밀번호에 대한 유효성 검증 코드입니다.
+ 정규식으로 검증 한 후에 중복된 데이터가 있는지 비동기로 처리하였습니다.
+ ```jsx 
+ //정보수정 비어있는 곳 검증
+	$('input[type=submit][name=submit]').click(function() {
+		
+	
+		
+
+		var name = $('input[name=name]').val();
+		console.log(name);
+		var birth = $('input[name=birth]').val();
+		var phone = $('input[name=phone]').val();
+		var address = $('input[name=address]').val();
+		var email = $('input[name=email]').val();
+		var dept_no = $('#dept_no option:selected').val();
+		var position = $('#position option:selected').val();
+		
+		var file = $('input[name=file]').val();
+		
+		
+		if(!name || !birth || !phone || !email || !dept_no || !position || !address){
+
+			alert('항목을 모두 채워주세요')
+			return false;
+		}else{
+			$('input[name=position]').val(position);
+			$('input[name=dept_no]').val(dept_no);
+			$('form').submit(function() {
+				return true;
+			})		
+			
+			
+		}
+
+	});
+ ```
+ 회원 정보를 수정할 때에 필수 항목 칸에 비어있는 곳이 있는지 확인하는 코드입니다.
+  ```jsx
+  /* 도로명주소 api */
+	    function sample4_execDaumPostcode() {
+        new daum.Postcode({
+            oncomplete: function(data) {
+                // 팝업에서 검색결과 항목을 클릭했을때 실행할 코드를 작성하는 부분.
+
+                // 도로명 주소의 노출 규칙에 따라 주소를 표시한다.
+                // 내려오는 변수가 값이 없는 경우엔 공백('')값을 가지므로, 이를 참고하여 분기 한다.
+                var roadAddr = data.roadAddress; // 도로명 주소 변수
+                var extraRoadAddr = ''; // 참고 항목 변수
+
+                // 법정동명이 있을 경우 추가한다. (법정리는 제외)
+                // 법정동의 경우 마지막 문자가 "동/로/가"로 끝난다.
+                if(data.bname !== '' && /[동|로|가]$/g.test(data.bname)){
+                    extraRoadAddr += data.bname;
+                }
+                // 건물명이 있고, 공동주택일 경우 추가한다.
+                if(data.buildingName !== '' && data.apartment === 'Y'){
+                   extraRoadAddr += (extraRoadAddr !== '' ? ', ' + data.buildingName : data.buildingName);
+                }
+                // 표시할 참고항목이 있을 경우, 괄호까지 추가한 최종 문자열을 만든다.
+                if(extraRoadAddr !== ''){
+                    extraRoadAddr = ' (' + extraRoadAddr + ')';
+                }
+
+                // 우편번호와 주소 정보를 해당 필드에 넣는다.
+                document.getElementById("sample4_roadAddress").value = roadAddr;
+                // 참고항목 문자열이 있을 경우 해당 필드에 넣는다.
+
+                var guideTextBox = document.getElementById("guide");
+                // 사용자가 '선택 안함'을 클릭한 경우, 예상 주소라는 표시를 해준다.
+                if(data.autoRoadAddress) {
+                    var expRoadAddr = data.autoRoadAddress + extraRoadAddr;
+                    guideTextBox.innerHTML = '(예상 도로명 주소 : ' + expRoadAddr + ')';
+                    guideTextBox.style.display = 'block';
+
+                } else if(data.autoJibunAddress) {
+                    var expJibunAddr = data.autoJibunAddress;
+                    guideTextBox.innerHTML = '(예상 지번 주소 : ' + expJibunAddr + ')';
+                    guideTextBox.style.display = 'block';
+                } else {
+                    guideTextBox.innerHTML = '';
+                    guideTextBox.style.display = 'none';
+                }
+            }
+        }).open();
+    }
+  ```
+  도로명 주소 api를 활용해 주소칸에 자동으로 입력되게 하는 코드입니다.
 
 #### DB 
  ![Display_3](https://user-images.githubusercontent.com/69295153/106435685-8bf75600-64b6-11eb-81c4-ad88c39d3b55.png)
